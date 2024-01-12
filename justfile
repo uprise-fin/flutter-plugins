@@ -27,7 +27,20 @@ publish-plugin PLUGIN:
 	(cd packages/{{PLUGIN}} && flutter pub publish)
 
 # 플러그인 실행
-# 사용 예: just run-plugin awesome_example
-run-plugin PLUGIN:
+# 사용 예: just run awesome_example
+run PLUGIN:
 	#!/usr/bin/env zsh
 	(cd packages/{{PLUGIN}}/example && flutter run)
+
+# 플러그인 설치
+# 사용 예: just pub-get awesome_example
+pub-get PLUGIN:
+	#!/usr/bin/env zsh
+	(cd packages/{{PLUGIN}}/example && flutter pub get)
+
+# 플러그인 청소
+# 사용 예: just clean awesome_example
+clean PLUGIN:
+	#!/usr/bin/env zsh
+	(cd packages/{{PLUGIN}}/example && flutter pub cache repair && flutter clean)
+
