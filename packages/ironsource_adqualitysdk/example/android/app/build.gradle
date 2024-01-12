@@ -63,13 +63,3 @@ android {
 flutter {
     source '../..'
 }
-
-repositories {
-    mavenCentral()
-    maven {url 'https://android-sdk.is.com/'} 
-}
-
-dependencies {
-    // ironSource Ad Quality SDK
-    implementation 'com.ironsource:adqualitysdk:7.15.0'
-}
