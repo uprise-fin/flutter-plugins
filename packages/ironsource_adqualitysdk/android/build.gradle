@@ -14,10 +14,12 @@ buildscript {
     }
 }
 
-allprojects {
+rootProject.allprojects {
     repositories {
         google()
-        mavenCentral()
+        maven {
+            url 'https://android-sdk.is.com/'
+        }
     }
 }
 
@@ -67,3 +69,7 @@ android {
     }
 }
 
+dependencies {
+    // ironSource Ad Quality SDK
+    implementation 'com.ironsource:adqualitysdk:7.15.0'
+}
