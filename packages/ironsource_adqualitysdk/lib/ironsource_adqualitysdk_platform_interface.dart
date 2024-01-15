@@ -24,7 +24,7 @@ abstract class IronsourceAdqualitysdkPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<String?> getPlatformVersion() {
+  Future<String?> initializeIronSource(String appKey) {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
 }
