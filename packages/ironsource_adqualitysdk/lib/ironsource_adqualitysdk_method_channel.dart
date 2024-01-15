@@ -14,7 +14,7 @@ class MethodChannelIronsourceAdqualitysdk
   @override
   Future<String?> initializeIronSource(String appKey) async {
     final result = await methodChannel
-        .invokeMethod('initializeIronSource', {'appKey': 'example'});
+        .invokeMethod('initializeIronSource', {'appKey': appKey});
 
     return result;
   }
