@@ -16,7 +16,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   static const platform =
-      MethodChannel('io.heybit.bitbunny/ironsource_adqualitysdk');
+      MethodChannel("io.heybit.bitbunny/ironsource_adqualitysdk");
 
   @override
   void initState() {
@@ -27,6 +27,8 @@ class _MyAppState extends State<MyApp> {
   Future<void> initPlatformState() async {
     var result = await platform
         .invokeMethod('initializeIronSource', {'appKey': 'example'});
+
+    print(result);
 
     if (!mounted) return;
   }

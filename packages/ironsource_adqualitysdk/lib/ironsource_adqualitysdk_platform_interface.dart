@@ -8,7 +8,8 @@ abstract class IronsourceAdqualitysdkPlatform extends PlatformInterface {
 
   static final Object _token = Object();
 
-  static IronsourceAdqualitysdkPlatform _instance = MethodChannelIronsourceAdqualitysdk();
+  static IronsourceAdqualitysdkPlatform _instance =
+      MethodChannelIronsourceAdqualitysdk();
 
   /// The default instance of [IronsourceAdqualitysdkPlatform] to use.
   ///
