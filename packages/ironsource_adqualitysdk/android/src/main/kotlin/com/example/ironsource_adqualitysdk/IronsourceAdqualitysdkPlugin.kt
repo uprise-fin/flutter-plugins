@@ -27,6 +27,9 @@ class IronsourceAdqualitysdkPlugin: FlutterPlugin, MethodCallHandler, ActivityAw
     if (call.method == IronsourceAdqualitysdkConst.INIT && call.hasArgument("appKey")) {
       IronSourceAdQuality.getInstance().initialize(this.activity, call.argument<String>("appKey")!!)
       result.success(null)
+    } else if (call.method == IronsourceAdqualitysdkConst.SET_USER_ID && call.hasArgument("userId")) {
+      IronSourceAdQuality.getInstance().changeUserId(call.argument<String>("userId")!!)
+      result.success(null)
     }
   }
 

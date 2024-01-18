@@ -25,6 +25,11 @@ abstract class IronsourceAdqualitysdkPlatform extends PlatformInterface {
   }
 
   Future<String?> initializeIronSource(String appKey) {
-    throw UnimplementedError('platformVersion() has not been implemented.');
+    throw UnimplementedError(
+        'initializeIronSource() has not been implemented.');
+  }
+
+  Future<String?> setUserId(String userId) {
+    throw UnimplementedError('setUserId() has not been implemented.');
   }
 }

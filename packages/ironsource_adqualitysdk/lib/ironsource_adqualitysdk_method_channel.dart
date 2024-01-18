@@ -18,4 +18,12 @@ class MethodChannelIronsourceAdqualitysdk
 
     return result;
   }
+
+  @override
+  Future<String?> setUserId(String userId) async {
+    final result =
+        await methodChannel.invokeMethod('setUserId', {'userId': userId});
+
+    return result;
+  }
 }

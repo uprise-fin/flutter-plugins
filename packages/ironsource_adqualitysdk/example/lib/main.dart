@@ -25,10 +25,8 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> initPlatformState() async {
-    var result = await platform
-        .invokeMethod('initializeIronSource', {'appKey': 'example'});
-
-    print(result);
+    await platform.invokeMethod('initializeIronSource', {'appKey': 'example'});
+    await platform.invokeMethod('setUserId', {'userId': 'example'});
 
     if (!mounted) return;
   }
