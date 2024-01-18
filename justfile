@@ -2,7 +2,7 @@
 # 사용 예: just create-plugin awesome_example
 create-plugin PLUGIN:
 	#!/usr/bin/env zsh
-	flutter create --template=plugin --platforms=android,ios packages/{{PLUGIN}}
+	flutter create --template=plugin --platforms=android,ios -a kotlin -i objc packages/{{PLUGIN}}
 	PUBSPEC="packages/{{PLUGIN}}/pubspec.yaml"
 	if [ -f "$PUBSPEC" ]; then
 		echo "Updating pubspec.yaml for {{PLUGIN}}..."
