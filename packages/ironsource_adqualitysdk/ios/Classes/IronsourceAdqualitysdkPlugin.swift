@@ -1,6 +1,6 @@
 import Flutter
 import UIKit
-import IronSourceAdQualitySDK
+import IronSourceAdQuality
 
 public class IronsourceAdqualitysdkPlugin: NSObject, FlutterPlugin {
   public static func register(with registrar: FlutterPluginRegistrar) {
