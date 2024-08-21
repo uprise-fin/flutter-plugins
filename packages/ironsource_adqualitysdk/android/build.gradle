@@ -71,5 +71,5 @@ android {
 
 dependencies {
     // ironSource Ad Quality SDK
-    implementation 'com.ironsource:adqualitysdk:7.15.0'
+    implementation 'com.ironsource:adqualitysdk:7.20.1'
 }
