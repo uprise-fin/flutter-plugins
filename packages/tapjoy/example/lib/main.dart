@@ -16,8 +16,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
-  final _tapjoyPlugin = Tapjoy();
+  static const platform = MethodChannel("io.heybit.bitbunny/tapjoy");
 
   @override
   void initState() {
@@ -25,26 +24,32 @@ class _MyAppState extends State<MyApp> {
     initPlatformState();
   }
 
-  // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    // We also handle the message potentially returning null.
-    try {
-      platformVersion =
-          await _tapjoyPlugin.getPlatformVersion() ?? 'Unknown platform version';
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
-    }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-
-    setState(() {
-      _platformVersion = platformVersion;
+    await platform.invokeMethod(
+        'setUserId', {'userId': '16300b18-4cc1-4b50-b6a8-4895f6f41a91'});
+    await platform.invokeMethod('connect', {
+      'sdkKey': 'qcbUxWfZRzOsFK83SZ_STQECbMy4HXKM3Z8JeRuOhyD7wUfr7Rfm0r6NArGp'
     });
+
+    if (!mounted) return;
+  }
+
+  Future<void> getPlacement() async {
+    try {
+      await platform.invokeMethod('getPlacement');
+      print("Successfully created placement.");
+    } on PlatformException catch (e) {
+      print("Failed to show offers: '${e.message}'.");
+    }
+  }
+
+  Future<void> showContent() async {
+    try {
+      await platform.invokeMethod('showContent');
+      print("Successfully requested content.");
+    } on PlatformException catch (e) {
+      print("Failed to show offers: '${e.message}'.");
+    }
   }
 
   @override
@@ -52,10 +57,23 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Plugin example app'),
+          title: const Text('Tapjoy Plugin Example'),
         ),
         body: Center(
-          child: Text('Running on: $_platformVersion\n'),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              const Text('Tapjoy Plugin Example'),
+              ElevatedButton(
+                onPressed: getPlacement,
+                child: const Text('getPlacement'),
+              ),
+              ElevatedButton(
+                onPressed: showContent,
+                child: const Text('requestContent'),
+              ),
+            ],
+          ),
         ),
       ),
     );

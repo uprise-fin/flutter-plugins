@@ -2,7 +2,7 @@ group 'com.example.tapjoy'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.7.10'
+    ext.kotlin_version = '1.9.0'
     repositories {
         google()
         mavenCentral()
@@ -14,10 +14,17 @@ buildscript {
     }
 }
 
-allprojects {
+rootProject.allprojects {
     repositories {
         google()
-        mavenCentral()
+        maven {
+            name "Tapjoy's maven repo"
+            url "https://sdk.tapjoy.com/"
+        }
+        maven {
+            name 'Google'
+            url 'https://maven.google.com/'
+        }
     }
 }
 
@@ -46,7 +53,7 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 19
+        minSdkVersion 21
     }
 
     dependencies {
@@ -65,4 +72,8 @@ android {
             }
         }
     }
+}
+
+dependencies {
+    implementation 'com.tapjoy:tapjoy-android-sdk:14.0.0'
 }

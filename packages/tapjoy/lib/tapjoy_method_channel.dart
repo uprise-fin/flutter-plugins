@@ -7,11 +7,35 @@ import 'tapjoy_platform_interface.dart';
 class MethodChannelTapjoy extends TapjoyPlatform {
   /// The method channel used to interact with the native platform.
   @visibleForTesting
-  final methodChannel = const MethodChannel('tapjoy');
+  final methodChannel = const MethodChannel('io.heybit.bitbunny/tapjoy');
 
   @override
-  Future<String?> getPlatformVersion() async {
-    final version = await methodChannel.invokeMethod<String>('getPlatformVersion');
-    return version;
+  Future<String?> setUserId(String userId) async {
+    final result =
+        await methodChannel.invokeMethod('setUserId', {'userId': userId});
+
+    return result;
+  }
+
+  @override
+  Future<String?> connect(String sdkKey) async {
+    final result =
+        await methodChannel.invokeMethod('connect', {'sdkKey': sdkKey});
+
+    return result;
+  }
+
+  @override
+  Future<String?> getPlacement() async {
+    final result = await methodChannel.invokeMethod('getPlacement');
+
+    return result;
+  }
+
+  @override
+  Future<String?> showContent() async {
+    final result = await methodChannel.invokeMethod('showContent');
+
+    return result;
   }
 }

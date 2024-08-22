@@ -23,7 +23,19 @@ abstract class TapjoyPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<String?> getPlatformVersion() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
+  Future<String?> setUserId(String userId) {
+    throw UnimplementedError('setUserId() has not been implemented.');
+  }
+
+  Future<String?> connect(String sdkKey) {
+    throw UnimplementedError('connect() has not been implemented.');
+  }
+
+  Future<String?> getPlacement() {
+    throw UnimplementedError('getPlacement() has not been implemented.');
+  }
+
+  Future<String?> showContent() {
+    throw UnimplementedError('showContent() has not been implemented.');
   }
 }
