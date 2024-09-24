@@ -22,6 +22,7 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     initPlatformState();
+    getPlacement();
   }
 
   Future<void> initPlatformState() async {
