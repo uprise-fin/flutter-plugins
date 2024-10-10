@@ -428,6 +428,11 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun showRewardedVideo(@NonNull call: MethodCall, @NonNull result: Result) {
+    if (activity == null) {
+      Log.i("showRewardedVideo", "NULL")
+    } else {
+      Log.i("showRewardedVideo", "NOT NULL")
+    }
     activity?.apply {
       // Retrieve placement name from method call arguments
       val placementName = call.argument("placementName") as String?
@@ -888,6 +893,11 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
       (activity as FlutterFragmentActivity).lifecycle.addObserver(this)
     }
     setActivityToListeners(activity)
+    if (activity == null) {
+      Log.i("IronSourcePlugIn", "onAttachedToActivity: activity is null")
+    } else {
+      Log.i("IronSourcePlugIn", "onAttachedToActivity: activity is not null")
+    }
   }
 
   override fun onDetachedFromActivityForConfigChanges() {
@@ -901,6 +911,11 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     }
     activity = null
     setActivityToListeners(null)
+    if (activity == null) {
+      Log.i("IronSourcePlugIn", "onDetachedFromActivityForConfigChanges: activity is null")
+    } else {
+      Log.i("IronSourcePlugIn", "onDetachedFromActivityForConfigChanges: activity is not null")
+    }
   }
 
   override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
@@ -915,6 +930,11 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
       (activity as FlutterFragmentActivity).lifecycle.addObserver(this)
     }
     setActivityToListeners(activity)
+    if (activity == null) {
+      Log.i("IronSourcePlugIn", "onReattachedToActivityForConfigChanges: activity is null")
+    } else {
+      Log.i("IronSourcePlugIn", "onReattachedToActivityForConfigChanges: activity is not null")
+    }
   }
   override fun onDetachedFromActivity() {
     if (activity is FlutterActivity)
@@ -927,6 +947,11 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     }
     activity = null
     setActivityToListeners(null)
+    if (activity == null) {
+      Log.i("IronSourcePlugIn", "onDetachedFromActivity: activity is null")
+    } else {
+      Log.i("IronSourcePlugIn", "onDetachedFromActivity: activity is not null")
+    }
   }
 
   // endregion
@@ -935,6 +960,11 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * Set FlutterActivity to listener instances
    */
   private fun setActivityToListeners(activity: Activity?) {
+    if (activity == null) {
+      Log.i("setActivityToListeners", "activity is null")
+    } else {
+      Log.i("setActivityToListeners", "activity is not null")
+    }
     mImpressionDataListener?.activity = activity
     mInitializationListener?.activity = activity
     mLevelPlayRewardedVideoListener?.activity = activity

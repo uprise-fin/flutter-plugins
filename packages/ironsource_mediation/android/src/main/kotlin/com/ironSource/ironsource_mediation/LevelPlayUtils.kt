@@ -24,6 +24,11 @@ class LevelPlayUtils {
      * @param args The arguments to pass to the method.
      */
     fun invokeChannelMethod(activity: Activity?, channel: MethodChannel, methodName: String, args: Any? = null) {
+      if (activity == null) {
+        Log.i("IRONSOURCE_DEBUG", "ACTIVITY IS NULL");
+      } else {
+        Log.i("IRONSOURCE_DEBUG", "ACTIVITY IS NOT NULL");
+      }
       activity?.runOnUiThread {
         channel.invokeMethod(methodName, args, object : MethodChannel.Result {
           override fun success(result: Any?) {}
