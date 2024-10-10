@@ -1,6 +1,6 @@
 package com.ironSource.ironsource_mediation
 
-import android.utils.Log
+import android.util.Log
 import android.app.Activity
 import io.flutter.plugin.common.MethodChannel
 
