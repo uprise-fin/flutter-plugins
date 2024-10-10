@@ -1,3 +1,13 @@
+## 2.0.0 , 2024
+
+- Android SDK: 8.1.0
+- iOS SDK: 8.1.0
+
+## 1.2.1 , 2024
+
+- Android SDK: 7.9.0
+- iOS SDK: 7.9.0
+
 ## 1.2.0 , 2023
 
 - Android SDK: 7.3.0.1
