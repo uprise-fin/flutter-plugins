@@ -100,6 +100,8 @@ class IronSourceMethodCallHandler {
         return;
       case 'LevelPlay_RewardedVideo:onAdClosed':
         final adInfo = IncomingValueParser.getAdInfo(call.arguments);
+        print(_levelPlayRewardedVideoListener == null ? "listener null" : " listener not null");
+        print(_levelPlayRewardedVideoManualListener == null ? "manualListener null" : "manualListener not null");
         _levelPlayRewardedVideoListener?.onAdClosed(adInfo);
         _levelPlayRewardedVideoManualListener?.onAdClosed(adInfo);
         return;
