@@ -33,6 +33,7 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.platform.PlatformViewFactory
+import io.flutter.plugin.common.BinaryMessenger
 import java.lang.IllegalStateException
 import java.util.concurrent.Executors
 import kotlin.math.abs
@@ -65,24 +66,23 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
   private var nativeAdViewFactories = hashMapOf<String, PlatformViewFactory>()
   private var pluginBinding: FlutterPluginBinding? = null
 
+  private lateinit var binaryMessenger: BinaryMessenger
+
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPluginBinding) {
-    channel = MethodChannel(flutterPluginBinding.binaryMessenger, "ironsource_mediation")
+    Log.d("IRONSOURCE_DEBUG", "onAttachedToEngine: Thread: ${Thread.currentThread().getName()}");
     context = flutterPluginBinding.applicationContext
     pluginBinding = flutterPluginBinding
 
     isPluginAttached = true
-    channel?.setMethodCallHandler(this)
-    initListeners()
-
     // Native ad view registry
     val nativeAdViewFactory = LevelPlayNativeAdViewFactoryTemplate(pluginBinding!!.binaryMessenger)
     addNativeAdViewFactory("levelPlayNativeAdViewType", nativeAdViewFactory)
   }
 
   override fun onDetachedFromEngine(@NonNull binding: FlutterPluginBinding) {
+    Log.d("IRONSOURCE_DEBUG", "onDetachedFromEngine: Thread: ${Thread.currentThread().getName()}");
     isPluginAttached = false
     channel?.setMethodCallHandler(null)
-    channel = null
     detachListeners()
   }
 
@@ -428,6 +428,7 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun showRewardedVideo(@NonNull call: MethodCall, @NonNull result: Result) {
+    Log.d("IRONSOURCE_DEBUG", "showRewardedVideo: activity: ${activity?.toString()}")
     activity?.apply {
       // Retrieve placement name from method call arguments
       val placementName = call.argument("placementName") as String?
@@ -559,6 +560,7 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun showInterstitial(@NonNull call: MethodCall, @NonNull result: Result) {
+    Log.d("IRONSOURCE_DEBUG", "showInterstitial: activity: ${activity?.toString()}")
     activity?.apply {
       val placementName = call.argument("placementName") as String?
       placementName?.let { name -> IronSource.showInterstitial(name) }
@@ -602,6 +604,7 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun loadBanner(@NonNull call: MethodCall, @NonNull result: Result) {
+    Log.d("IRONSOURCE_DEBUG", "loadBanner: activity: ${activity?.toString()}")
     // fallback to BANNER in the case of invalid descriptions
     fun getBannerSize(description: String, width: Int, height: Int): ISBannerSize {
       return when (description) {
@@ -724,6 +727,7 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun destroyBanner(@NonNull result: Result) {
+    Log.d("IRONSOURCE_DEBUG", "destroyBanner: activity: ${activity?.toString()}")
     activity?.apply {
       runOnUiThread {
         synchronized(this@IronSourceMediationPlugin) {
@@ -746,6 +750,7 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun displayBanner(@NonNull result: Result) {
+    Log.d("IRONSOURCE_DEBUG", "displayBanner: activity: ${activity?.toString()}")
     activity?.apply {
       runOnUiThread {
         synchronized(this@IronSourceMediationPlugin) {
@@ -765,6 +770,7 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun hideBanner(@NonNull result: Result) {
+    Log.d("IRONSOURCE_DEBUG", "hideBanner: activity: ${activity?.toString()}")
     activity?.apply {
       runOnUiThread {
         synchronized(this@IronSourceMediationPlugin) {
@@ -878,7 +884,13 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
 
   /** region ActivityAware =======================================================================*/
   override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+    Log.d("IRONSOURCE_DEBUG", "onAttachedToActivity: Thread: ${Thread.currentThread().getName()}");
+    Log.d("IRONSOURCE_DEBUG", "onAttachedToActivity: activity: ${activity?.toString()}")
     activity = binding.activity
+    channel = MethodChannel(pluginBinding!!.binaryMessenger, "ironsource_mediation")
+    channel?.setMethodCallHandler(this)
+    initListeners()
+
     if (activity is FlutterActivity)
     {
       (activity as FlutterActivity).lifecycle.addObserver(this)
@@ -891,6 +903,8 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
   }
 
   override fun onDetachedFromActivityForConfigChanges() {
+    Log.d("IRONSOURCE_DEBUG", "onDetachedFromActivityForConfigChanges: Thread: ${Thread.currentThread().getName()}");
+    Log.d("IRONSOURCE_DEBUG", "onDetachedFromActivityForConfigChanges: activity: ${activity?.toString()}")
     if (activity is FlutterActivity)
     {
       (activity as FlutterActivity).lifecycle.removeObserver(this)
@@ -904,6 +918,7 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
   }
 
   override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+    Log.d("IRONSOURCE_DEBUG", "onReattachedToActivityForConfigChanges: activity: ${activity?.toString()}")
     if (activity is FlutterActivity)
     {
       activity = binding.activity as FlutterActivity
@@ -917,6 +932,7 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     setActivityToListeners(activity)
   }
   override fun onDetachedFromActivity() {
+    Log.d("IRONSOURCE_DEBUG", "onDetachedFromActivity: activity: ${activity?.toString()}")
     if (activity is FlutterActivity)
     {
       (activity as FlutterActivity).lifecycle.removeObserver(this)
@@ -935,20 +951,24 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * Set FlutterActivity to listener instances
    */
   private fun setActivityToListeners(activity: Activity?) {
+    Log.d("IRONSOURCE_DEBUG", "setActivityToListeners: activity: ${activity?.toString()}")
     mImpressionDataListener?.activity = activity
     mInitializationListener?.activity = activity
     mLevelPlayRewardedVideoListener?.activity = activity
     mLevelPlayInterstitialListener?.activity = activity
     mLevelPlayBannerListener?.activity = activity
+    Log.d("IRONSOURCE_DEBUG", "end setActivityToListeners: activity: ${activity?.toString()}")
   }
 
   /** region LifeCycleObserver  ==================================================================*/
   @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
   fun onResume() {
+    Log.d("IRONSOURCE_DEBUG", "onResume: activity: ${activity?.toString()}")
     activity?.apply { IronSource.onResume(this) }
   }
   @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
   fun onPause() {
+    Log.d("IRONSOURCE_DEBUG", "onPause: activity: ${activity?.toString()}")
     activity?.apply { IronSource.onPause(this) }
   }
   // endregion

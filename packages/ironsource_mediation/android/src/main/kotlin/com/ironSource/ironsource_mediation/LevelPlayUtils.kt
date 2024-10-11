@@ -24,16 +24,21 @@ class LevelPlayUtils {
      * @param args The arguments to pass to the method.
      */
     fun invokeChannelMethod(activity: Activity?, channel: MethodChannel, methodName: String, args: Any? = null) {
+      Log.d("LevelPlayUtils", "activity: ${activity?.toString()}, method: ${methodName}")
       activity?.runOnUiThread {
         channel.invokeMethod(methodName, args, object : MethodChannel.Result {
           override fun success(result: Any?) {}
           override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
-            Log.e(IronSourceMediationPlugin.TAG, "Error: invokeMethod $methodName failed "
+            Log.e("IRONSOURCE_DEBUG", "Error: invokeMethod $methodName failed "
                 + "errorCode: $errorCode, message: $errorMessage, details: $errorDetails")
           }
 
           override fun notImplemented() {
-            throw Error("Critical Error: invokeMethod $methodName notImplemented ")
+            try{
+              throw Error("Critical Error: invokeMethod $methodName notImplemented ")
+            }catch(e: Error){
+              Log.e("IRONSOURCE_DEBUG", "Critical Error: invokeMethod $methodName notImplemented ")
+            }
           }
         })
       }
