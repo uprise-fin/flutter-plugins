@@ -3,8 +3,8 @@ class IronConst {
   static const String METHOD_CHANNEL = 'ironsource_mediation';
   static const String PLUGIN_TYPE = 'Flutter';
   static const String PLUGIN_VERSION = '2.0.0';
-  static const String ANDROID_SDK_VERSION = '8.1.0';
-  static const String IOS_SDK_VERSION = '8.1.0';
+  static const String ANDROID_SDK_VERSION = '8.4.0';
+  static const String IOS_SDK_VERSION = '8.4.0';
 }
 
 /// Argument Keys
