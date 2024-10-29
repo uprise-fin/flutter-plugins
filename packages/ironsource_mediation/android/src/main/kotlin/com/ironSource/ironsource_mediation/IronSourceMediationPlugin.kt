@@ -1,6 +1,7 @@
 package com.ironSource.ironsource_mediation
 
 import android.app.Activity
+import android.app.ActivityManager;
 import android.content.Context
 import android.graphics.Color
 import android.util.Log
@@ -68,9 +69,25 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
 
   private lateinit var binaryMessenger: BinaryMessenger
 
+  private fun isAppRunningInForegroundService(context: Context?): Boolean {
+    if (context == null) return true
+    Log.d("IRONSOURCE_DEBUG", "package name: ${context.packageName}");
+    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+    val runningProcesses = activityManager?.runningAppProcesses ?: return true
+    runningProcesses.forEach {
+      Log.d("IRONSOURCE_DEBUG", "process name: ${it.importance}")
+    }
+    return runningProcesses.none { it.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND_SERVICE }
+  }
+
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPluginBinding) {
-    Log.d("IRONSOURCE_DEBUG", "onAttachedToEngine: Thread: ${Thread.currentThread().getName()}");
+      Log.d("IRONSOURCE_DEBUG", "onAttachedToEngine: Thread: ${Thread.currentThread().getName()}");
     context = flutterPluginBinding.applicationContext
+    if (isAppRunningInForegroundService(context)) {
+      Log.d("IRONSOURCE_DEBUG", "onAttachedToEngine: Thread: ${Thread.currentThread().getName()}");
+      return
+    }
+
     pluginBinding = flutterPluginBinding
 
     isPluginAttached = true
@@ -80,7 +97,12 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
   }
 
   override fun onDetachedFromEngine(@NonNull binding: FlutterPluginBinding) {
-    Log.d("IRONSOURCE_DEBUG", "onDetachedFromEngine: Thread: ${Thread.currentThread().getName()}");
+    Log.d("IRONSOURCE_DEBUG", "onAttachedToEngine: Thread: ${Thread.currentThread().getName()}");
+    if (isAppRunningInForegroundService(context)) {
+      Log.d("IRONSOURCE_DEBUG", "onAttachedToEngine: Thread: ${Thread.currentThread().getName()}");
+      return
+    }
+
     isPluginAttached = false
     channel?.setMethodCallHandler(null)
     detachListeners()
