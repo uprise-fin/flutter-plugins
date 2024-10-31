@@ -28,18 +28,19 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.FlutterPlugin.FlutterPluginBinding
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.platform.PlatformViewFactory
-import io.flutter.plugin.common.BinaryMessenger
 import java.lang.IllegalStateException
 import java.util.concurrent.Executors
 import kotlin.math.abs
 
 /** IronSourceMediationPlugin */
-class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, LifecycleObserver {
+class IronSourceMediationPlugin :
+        FlutterPlugin, MethodCallHandler, ActivityAware, LifecycleObserver {
   /// The MethodChannel that will the communication between Flutter and native Android
   ///
   /// This local reference serves to register the plugin with the Flutter Engine and unregister it
@@ -66,31 +67,46 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
   private var nativeAdViewFactories = hashMapOf<String, PlatformViewFactory>()
   private var pluginBinding: FlutterPluginBinding? = null
 
-  private lateinit var binaryMessenger: BinaryMessenger
+  private var binaryMessenger: BinaryMessenger? = null
+  private val CHANNEL_NAME = "ironsource_mediation"
 
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPluginBinding) {
-    Log.d("IRONSOURCE_DEBUG", "onAttachedToEngine: Thread: ${Thread.currentThread().getName()}");
+    Log.d(
+            "IronSourceMediationPlugin",
+            "onAttachedToEngine: Thread: ${Thread.currentThread().getName()}"
+    )
+    binaryMessenger = flutterPluginBinding.binaryMessenger
     context = flutterPluginBinding.applicationContext
     pluginBinding = flutterPluginBinding
 
-    isPluginAttached = true
     // Native ad view registry
     val nativeAdViewFactory = LevelPlayNativeAdViewFactoryTemplate(pluginBinding!!.binaryMessenger)
     addNativeAdViewFactory("levelPlayNativeAdViewType", nativeAdViewFactory)
   }
 
-  override fun onDetachedFromEngine(@NonNull binding: FlutterPluginBinding) {
-    Log.d("IRONSOURCE_DEBUG", "onDetachedFromEngine: Thread: ${Thread.currentThread().getName()}");
-    isPluginAttached = false
-    channel?.setMethodCallHandler(null)
-    detachListeners()
+  fun init() {
+    Log.d("IronSourceMediationPlugin", "init: Thread: ${Thread.currentThread().getName()}")
+    channel = MethodChannel(binaryMessenger!!, CHANNEL_NAME)
+    channel?.setMethodCallHandler(this)
+    initListeners()
   }
 
-  /**
-   * Instantiate and set listeners
-   */
+  override fun onDetachedFromEngine(@NonNull binding: FlutterPluginBinding) {
+    //
+    Log.d(
+            "IronSourceMediationPlugin",
+            "onDetachedFromEngine: Thread: ${Thread.currentThread().getName()}"
+    )
+
+    if (channel != null) {
+      channel?.setMethodCallHandler(null)
+      detachListeners()
+    }
+  }
+
+  /** Instantiate and set listeners */
   private fun initListeners() {
-    channel?.let { channel->
+    channel?.let { channel ->
       // ImpressionData Listener
       if (mImpressionDataListener == null) {
         mImpressionDataListener = ImpressionDataListener(channel)
@@ -120,9 +136,7 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     setActivityToListeners(activity)
   }
 
-  /**
-   * Listener Reference Clean Up
-   */
+  /** Listener Reference Clean Up */
   private fun detachListeners() {
     // ILR
     mImpressionDataListener?.let { IronSource.removeImpressionDataListener(it) }
@@ -139,7 +153,9 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
 
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
     when (call.method) {
-      /** Base API ===============================================================================*/
+      /**
+       * Base API ===============================================================================
+       */
       "validateIntegration" -> validateIntegration(result)
       "shouldTrackNetworkState" -> shouldTrackNetworkState(call, result)
       "setAdaptersDebug" -> setAdaptersDebug(call, result)
@@ -149,12 +165,19 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
       "setSegment" -> setSegment(call, result)
       "setMetaData" -> setMetaData(call, result)
       "setWaterfallConfiguration" -> setWaterfallConfiguration(call, result)
-      /**Test Suite API ==========================================================================*/
+      /**
+       * Test Suite API ==========================================================================
+       */
       "launchTestSuite" -> launchTestSuite(result)
-      /** Init API ===============================================================================*/
+      /**
+       * Init API ===============================================================================
+       */
       "setUserId" -> setUserId(call, result)
       "init" -> initIronSource(call, result)
-      /** RewardedVideo API =================================================================================*/
+      /**
+       * RewardedVideo API
+       * =================================================================================
+       */
       "showRewardedVideo" -> showRewardedVideo(call, result)
       "getRewardedVideoPlacementInfo" -> getRewardedVideoPlacementInfo(call, result)
       "isRewardedVideoAvailable" -> isRewardedVideoAvailable(result)
@@ -163,29 +186,41 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
       "clearRewardedVideoServerParams" -> clearRewardedVideoServerParams(result)
       "loadRewardedVideo" -> loadRewardedVideo(result)
       "setLevelPlayRewardedVideoManual" -> setLevelPlayRewardedVideoManual(result)
-      /** Interstitial API =================================================================================*/
+      /**
+       * Interstitial API
+       * =================================================================================
+       */
       "loadInterstitial" -> loadInterstitial(result)
       "showInterstitial" -> showInterstitial(call, result)
       "isInterstitialReady" -> isInterstitialReady(result)
       "isInterstitialPlacementCapped" -> isInterstitialPlacementCapped(call, result)
-      /** Banner API =================================================================================*/
+      /**
+       * Banner API
+       * =================================================================================
+       */
       "loadBanner" -> loadBanner(call, result)
       "destroyBanner" -> destroyBanner(result)
       "displayBanner" -> displayBanner(result)
       "hideBanner" -> hideBanner(result)
       "isBannerPlacementCapped" -> isBannerPlacementCapped(call, result)
       "getMaximalAdaptiveHeight" -> getMaximalAdaptiveHeight(call, result)
-      /** Config API =============================================================================*/
+      /**
+       * Config API =============================================================================
+       */
       "setClientSideCallbacks" -> setClientSideCallbacks(call, result)
-      /** Internal Config API ====================================================================*/
+      /**
+       * Internal Config API ====================================================================
+       */
       "setPluginData" -> setPluginData(call, result)
       else -> result.notImplemented()
     }
   }
 
-  /** region Base API ============================================================================*/
+  /**
+   * region Base API ============================================================================
+   */
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Validates the integration of the SDK.
    *
@@ -195,10 +230,11 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     activity?.apply {
       IntegrationHelper.validateIntegration(this)
       return result.success(null)
-    } ?: return result.error("ERROR", "Activity is null", null)
+    }
+            ?: return result.error("ERROR", "Activity is null", null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Sets whether to track network state for IronSource SDK.
    *
@@ -209,13 +245,14 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     if (activity == null) {
       return result.error("ERROR", "Activity is null", null)
     }
-    val isEnabled = call.argument("isEnabled") as Boolean?
-        ?: return result.error("ERROR", "isEnabled is null", null)
+    val isEnabled =
+            call.argument("isEnabled") as Boolean?
+                    ?: return result.error("ERROR", "isEnabled is null", null)
     IronSource.shouldTrackNetworkState(activity, isEnabled)
     return result.success(null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Sets whether to enable debug mode for IronSource SDK adapters.
    *
@@ -223,13 +260,14 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun setAdaptersDebug(@NonNull call: MethodCall, @NonNull result: Result) {
-    val isEnabled = call.argument("isEnabled") as Boolean?
-        ?: return result.error("ERROR", "isEnabled is null", null)
+    val isEnabled =
+            call.argument("isEnabled") as Boolean?
+                    ?: return result.error("ERROR", "isEnabled is null", null)
     IronSource.setAdaptersDebug(isEnabled)
     return result.success(null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Sets the dynamic user ID for IronSource SDK.
    *
@@ -237,14 +275,15 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun setDynamicUserId(@NonNull call: MethodCall, @NonNull result: Result) {
-    val userId = call.argument("userId") as String?
-        ?: return result.error("ERROR", "userId is null", null)
+    val userId =
+            call.argument("userId") as String?
+                    ?: return result.error("ERROR", "userId is null", null)
 
     IronSource.setDynamicUserId(userId)
     return result.success(null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Retrieves the advertiser ID asynchronously.
    *
@@ -258,10 +297,11 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
         val idStr = IronSource.getAdvertiserId(this)
         runOnUiThread { result.success(idStr) }
       }
-    } ?: return result.error("ERROR", "getAdvertiserId called when activity is null", null)
+    }
+            ?: return result.error("ERROR", "getAdvertiserId called when activity is null", null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Sets the consent status for the user.
    *
@@ -269,13 +309,14 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun setConsent(@NonNull call: MethodCall, @NonNull result: Result) {
-    val isConsent = call.argument("isConsent") as Boolean?
-        ?: return result.error("ERROR", "isConsent is null", null)
+    val isConsent =
+            call.argument("isConsent") as Boolean?
+                    ?: return result.error("ERROR", "isConsent is null", null)
     IronSource.setConsent(isConsent)
     return result.success(null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Sets the segment for the user.
    *
@@ -283,8 +324,9 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun setSegment(@NonNull call: MethodCall, @NonNull result: Result) {
-    val segmentMap = call.argument("segment") as HashMap<String, Any?>?
-        ?: return result.error("ERROR", "segment is null", null)
+    val segmentMap =
+            call.argument("segment") as HashMap<String, Any?>?
+                    ?: return result.error("ERROR", "segment is null", null)
     val iSSegment = IronSourceSegment()
     segmentMap.entries.forEach { entry ->
       when (entry.key) {
@@ -293,9 +335,13 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
         "segmentName" -> entry.value?.let { iSSegment.segmentName = it as String }
         "age" -> entry.value?.let { iSSegment.age = if (it is Int) it else (it as Long).toInt() }
         "gender" -> entry.value?.let { iSSegment.gender = it as String }
-        "level" -> entry.value?.let { iSSegment.level = if (it is Int) it else (it as Long).toInt() }
+        "level" ->
+                entry.value?.let { iSSegment.level = if (it is Int) it else (it as Long).toInt() }
         "isPaying" -> entry.value?.let { iSSegment.setIsPaying(it as Boolean) }
-        "userCreationDate" -> entry.value?.let { iSSegment.setUserCreationDate(if (it is Long) it else (it as Int).toLong()) }
+        "userCreationDate" ->
+                entry.value?.let {
+                  iSSegment.setUserCreationDate(if (it is Long) it else (it as Int).toLong())
+                }
         "iapTotal" -> entry.value?.let { iSSegment.setIAPTotal(it as Double) }
         else -> entry.value?.let { iSSegment.setCustom(entry.key, it as String) }
       }
@@ -304,7 +350,7 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     return result.success(null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Sets meta data for IronSource.
    *
@@ -312,10 +358,13 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun setMetaData(@NonNull call: MethodCall, @NonNull result: Result) {
-    val metaDataMap = call.argument("metaData") as HashMap<String, List<String>>?
-        ?: return result.error("ERROR", "metaData is null", null)
+    val metaDataMap =
+            call.argument("metaData") as HashMap<String, List<String>>?
+                    ?: return result.error("ERROR", "metaData is null", null)
     // internally overload function uses setMetaData(key: String, values:List<String>) after all
-    metaDataMap.entries.forEach { entry: Map.Entry<String, List<String>> -> IronSource.setMetaData(entry.key, entry.value) }
+    metaDataMap.entries.forEach { entry: Map.Entry<String, List<String>> ->
+      IronSource.setMetaData(entry.key, entry.value)
+    }
     return result.success(null)
   }
 
@@ -329,7 +378,7 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     return result.success(null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Sets the waterfall configuration for an ad unit.
    *
@@ -338,8 +387,9 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    */
   private fun setWaterfallConfiguration(call: MethodCall, result: Result) {
     // Retrieve the waterfall configuration data map from the method call arguments
-    val waterfallConfigurationDataMap = call.argument("waterfallConfiguration") as HashMap<String, Any>?
-      ?: return result.error("ERROR", "waterfallConfiguration is null", null)
+    val waterfallConfigurationDataMap =
+            call.argument("waterfallConfiguration") as HashMap<String, Any>?
+                    ?: return result.error("ERROR", "waterfallConfiguration is null", null)
 
     // Retrieve the ceiling and floor values from the waterfall configuration data map
     val ceiling = waterfallConfigurationDataMap["ceiling"] as Double?
@@ -353,11 +403,8 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
       // If both ceiling and floor values are provided, set the waterfall configuration
       if (ceiling != null && floor != null) {
         IronSource.setWaterfallConfiguration(
-          WaterfallConfiguration.builder()
-            .setFloor(floor)
-            .setCeiling(ceiling)
-            .build(),
-          adUnit
+                WaterfallConfiguration.builder().setFloor(floor).setCeiling(ceiling).build(),
+                adUnit
         )
       }
     }
@@ -366,9 +413,11 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
   }
   // endregion
 
-  /** region Init API ============================================================================*/
+  /**
+   * region Init API ============================================================================
+   */
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Sets the user ID for IronSource.
    *
@@ -376,14 +425,15 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun setUserId(@NonNull call: MethodCall, @NonNull result: Result) {
-    val userId = call.argument("userId") as String?
-        ?: return result.error("ERROR", "userId is null", null)
+    val userId =
+            call.argument("userId") as String?
+                    ?: return result.error("ERROR", "userId is null", null)
 
     IronSource.setUserId(userId)
     return result.success(null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Initializes IronSource SDK with the provided app key and ad units.
    *
@@ -394,22 +444,31 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     if (activity == null) {
       return result.error("ERROR", "Activity is null", null)
     }
-    val appKey = call.argument("appKey") as String?
-        ?: return result.error("ERROR", "appKey is null", null)
+    val appKey =
+            call.argument("appKey") as String?
+                    ?: return result.error("ERROR", "appKey is null", null)
     val adUnits = call.argument("adUnits") as List<String>?
 
     if (adUnits == null) {
       IronSource.init(activity, appKey, mInitializationListener)
     } else {
-      val parsed = adUnits.map {
-        when (it) {
-          "REWARDED_VIDEO" -> IronSource.AD_UNIT.REWARDED_VIDEO
-          "INTERSTITIAL" -> IronSource.AD_UNIT.INTERSTITIAL
-          "BANNER" -> IronSource.AD_UNIT.BANNER
-          "NATIVE_AD" -> IronSource.AD_UNIT.NATIVE_AD
-          else -> return@initIronSource result.error("ERROR", "Unsupported ad unit: $it", null)
-        }
-      }.toTypedArray()
+      val parsed =
+              adUnits
+                      .map {
+                        when (it) {
+                          "REWARDED_VIDEO" -> IronSource.AD_UNIT.REWARDED_VIDEO
+                          "INTERSTITIAL" -> IronSource.AD_UNIT.INTERSTITIAL
+                          "BANNER" -> IronSource.AD_UNIT.BANNER
+                          "NATIVE_AD" -> IronSource.AD_UNIT.NATIVE_AD
+                          else ->
+                                  return@initIronSource result.error(
+                                          "ERROR",
+                                          "Unsupported ad unit: $it",
+                                          null
+                                  )
+                        }
+                      }
+                      .toTypedArray()
       IronSource.init(activity, appKey, mInitializationListener, *parsed)
     }
 
@@ -418,9 +477,12 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
 
   // endregion
 
-  /** region RewardedVideo API ==============================================================================*/
+  /**
+   * region RewardedVideo API
+   * ==============================================================================
+   */
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Shows a rewarded video.
    *
@@ -428,21 +490,20 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    * @param result The result to be returned after processing.
    */
   private fun showRewardedVideo(@NonNull call: MethodCall, @NonNull result: Result) {
-    Log.d("IRONSOURCE_DEBUG", "showRewardedVideo: activity: ${activity?.toString()}")
     activity?.apply {
       // Retrieve placement name from method call arguments
       val placementName = call.argument("placementName") as String?
       // Show rewarded video with or without placement name based on its presence
       placementName?.let { name -> IronSource.showRewardedVideo(name) }
-        ?: IronSource.showRewardedVideo()
+              ?: IronSource.showRewardedVideo()
 
       // Return success
       return result.success(null)
-    } ?: return result.error("ERROR", "showRewardedVideo called when activity is null", null)
+    }
+            ?: return result.error("ERROR", "showRewardedVideo called when activity is null", null)
   }
 
-
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Retrieves information about a rewarded video placement.
    *
@@ -451,8 +512,9 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    */
   private fun getRewardedVideoPlacementInfo(@NonNull call: MethodCall, @NonNull result: Result) {
     // Retrieve placement name from method call arguments
-    val placementName = call.argument("placementName") as String?
-      ?: return result.error("ERROR", "placementName is null", null)
+    val placementName =
+            call.argument("placementName") as String?
+                    ?: return result.error("ERROR", "placementName is null", null)
     // Get placement information from IronSource SDK
     val placement: Placement? = IronSource.getRewardedVideoPlacementInfo(placementName)
     // Return placement information as a map or null
@@ -469,7 +531,7 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     return result.success(IronSource.isRewardedVideoAvailable())
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Checks if a rewarded video placement is capped.
    *
@@ -478,14 +540,15 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    */
   private fun isRewardedVideoPlacementCapped(@NonNull call: MethodCall, @NonNull result: Result) {
     // Retrieve placement name from method call arguments
-    val placementName = call.argument("placementName") as String?
-      ?: return result.error("ERROR", "placementName is null", null)
+    val placementName =
+            call.argument("placementName") as String?
+                    ?: return result.error("ERROR", "placementName is null", null)
     // Check if rewarded video placement is capped and return the result
     val isCapped = IronSource.isRewardedVideoPlacementCapped(placementName)
     return result.success(isCapped)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Sets server parameters for rewarded video.
    *
@@ -494,8 +557,9 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
    */
   private fun setRewardedVideoServerParams(@NonNull call: MethodCall, @NonNull result: Result) {
     // Retrieve parameters from method call arguments
-    val parameters = call.argument("parameters") as HashMap<String, String>?
-      ?: return result.error("ERROR", "parameters is null", null)
+    val parameters =
+            call.argument("parameters") as HashMap<String, String>?
+                    ?: return result.error("ERROR", "parameters is null", null)
     // Set rewarded video server parameters
     IronSource.setRewardedVideoServerParameters(parameters)
     // Return success
@@ -515,8 +579,7 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
   }
 
   /**
-   * Sets up manual loading for Rewarded Video.
-   * This method must be called before initialization.
+   * Sets up manual loading for Rewarded Video. This method must be called before initialization.
    *
    * @param result The result to be returned after processing.
    */
@@ -540,7 +603,10 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
   }
   // endregion
 
-  /** region Interstitial API ==============================================================================*/
+  /**
+   * region Interstitial API
+   * ==============================================================================
+   */
 
   /**
    * Loads an Interstitial ad.
@@ -552,22 +618,22 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     return result.success(null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Shows an Interstitial ad.
    *
-   * @param call   The method call containing arguments, such as placementName.
+   * @param call The method call containing arguments, such as placementName.
    * @param result The result to be returned after processing.
    */
   private fun showInterstitial(@NonNull call: MethodCall, @NonNull result: Result) {
-    Log.d("IRONSOURCE_DEBUG", "showInterstitial: activity: ${activity?.toString()}")
     activity?.apply {
       val placementName = call.argument("placementName") as String?
       placementName?.let { name -> IronSource.showInterstitial(name) }
-          ?: IronSource.showInterstitial()
+              ?: IronSource.showInterstitial()
 
       return result.success(null)
-    } ?: return result.error("ERROR", "showInterstitial called when activity is null", null)
+    }
+            ?: return result.error("ERROR", "showInterstitial called when activity is null", null)
   }
 
   /**
@@ -579,32 +645,34 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     return result.success(IronSource.isInterstitialReady())
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Checks if the specified Interstitial placement is capped.
    *
-   * @param call   The method call containing arguments, such as placementName.
+   * @param call The method call containing arguments, such as placementName.
    * @param result The result to be returned after processing.
    */
   private fun isInterstitialPlacementCapped(@NonNull call: MethodCall, @NonNull result: Result) {
-    val placementName = call.argument("placementName") as String?
-        ?: return result.error("ERROR", "placementName is null", null)
+    val placementName =
+            call.argument("placementName") as String?
+                    ?: return result.error("ERROR", "placementName is null", null)
     val isCapped = IronSource.isInterstitialPlacementCapped(placementName)
     return result.success(isCapped)
   }
   // endregion
 
-  /** region Banner API ==============================================================================*/
-
+  /**
+   * region Banner API
+   * ==============================================================================
+   */
 
   /**
    * Loads a banner ad.
    *
-   * @param call   The method call containing arguments.
+   * @param call The method call containing arguments.
    * @param result The result to be returned after processing.
    */
   private fun loadBanner(@NonNull call: MethodCall, @NonNull result: Result) {
-    Log.d("IRONSOURCE_DEBUG", "loadBanner: activity: ${activity?.toString()}")
     // fallback to BANNER in the case of invalid descriptions
     fun getBannerSize(description: String, width: Int, height: Int): ISBannerSize {
       return when (description) {
@@ -617,27 +685,37 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
       }
     }
 
-    //TODO: Implement with real error codes
+    // TODO: Implement with real error codes
     activity?.apply {
       // args
       // Dart int is 64bits, so if the value is over 32bits, it is parsed into Long
       // Therefore, the Int fields could be passed as Long in some cases and must be safely cast
-      val description = call.argument("description") as String?
-          ?: return result.error("ERROR", "description is null", null)
-      val width = (call.argument("width") as Any?)?.let { if (it is Int) it else (it as Long).toInt() }
-          ?: return result.error("ERROR", "width is null", null)
-      val height = (call.argument("height") as Any?)?.let { if (it is Int) it else (it as Long).toInt() }
-          ?: return result.error("ERROR", "height is null", null)
-      val isAdaptive = call.argument("isAdaptive") as Boolean?
-          ?: return result.error("ERROR", "isAdaptive is null", null)
-      val containerWidth = call.argument("containerWidth") as Int?
-          ?: return result.error("ERROR", "containerWidth is null", null)
-      val containerHeight = call.argument("containerHeight") as Int?
-        ?: return result.error("ERROR", "containerHeight is null", null)
-      val position = (call.argument("position") as Any?)?.let { if (it is Int) it else (it as Long).toInt() }
-          ?: return result.error("ERROR", "position is null", null)
-      val offset = (call.argument("offset") as Any?)?.let { if (it is Int) it else (it as Long).toInt() }
-          ?: 0
+      val description =
+              call.argument("description") as String?
+                      ?: return result.error("ERROR", "description is null", null)
+      val width =
+              (call.argument("width") as Any?)?.let { if (it is Int) it else (it as Long).toInt() }
+                      ?: return result.error("ERROR", "width is null", null)
+      val height =
+              (call.argument("height") as Any?)?.let { if (it is Int) it else (it as Long).toInt() }
+                      ?: return result.error("ERROR", "height is null", null)
+      val isAdaptive =
+              call.argument("isAdaptive") as Boolean?
+                      ?: return result.error("ERROR", "isAdaptive is null", null)
+      val containerWidth =
+              call.argument("containerWidth") as Int?
+                      ?: return result.error("ERROR", "containerWidth is null", null)
+      val containerHeight =
+              call.argument("containerHeight") as Int?
+                      ?: return result.error("ERROR", "containerHeight is null", null)
+      val position =
+              (call.argument("position") as Any?)?.let {
+                if (it is Int) it else (it as Long).toInt()
+              }
+                      ?: return result.error("ERROR", "position is null", null)
+      val offset =
+              (call.argument("offset") as Any?)?.let { if (it is Int) it else (it as Long).toInt() }
+                      ?: 0
       val placementName = call.argument("placementName") as String?
 
       runOnUiThread {
@@ -645,15 +723,19 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
           try {
             // Create a container
             if (mBannerContainer == null) {
-              mBannerContainer = FrameLayout(this).apply {
-                fitsSystemWindows = true
-                setBackgroundColor(Color.TRANSPARENT)
-              }
+              mBannerContainer =
+                      FrameLayout(this).apply {
+                        fitsSystemWindows = true
+                        setBackgroundColor(Color.TRANSPARENT)
+                      }
               mBannerContainer?.visibility = mBannerVisibility
-              this.addContentView(mBannerContainer, FrameLayout.LayoutParams(
-                  FrameLayout.LayoutParams.MATCH_PARENT,
-                  FrameLayout.LayoutParams.MATCH_PARENT
-              ))
+              this.addContentView(
+                      mBannerContainer,
+                      FrameLayout.LayoutParams(
+                              FrameLayout.LayoutParams.MATCH_PARENT,
+                              FrameLayout.LayoutParams.MATCH_PARENT
+                      )
+              )
             }
 
             // Create banner if not exists yet
@@ -673,25 +755,31 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
               // Create the banner layout with/without the adaptive settings
               mBanner = IronSource.createBanner(this, size)
 
-              val gravity = when (position) {
-                BannerPosition.Top.value -> Gravity.TOP
-                BannerPosition.Center.value -> Gravity.CENTER
-                BannerPosition.Bottom.value -> Gravity.BOTTOM
-                else -> throw IllegalArgumentException("BannerPosition: $position is not supported.")
-              }
+              val gravity =
+                      when (position) {
+                        BannerPosition.Top.value -> Gravity.TOP
+                        BannerPosition.Center.value -> Gravity.CENTER
+                        BannerPosition.Bottom.value -> Gravity.BOTTOM
+                        else ->
+                                throw IllegalArgumentException(
+                                        "BannerPosition: $position is not supported."
+                                )
+                      }
 
               // Banner layout params
-              val layoutParams = FrameLayout.LayoutParams(
-                  FrameLayout.LayoutParams.MATCH_PARENT,
-                  FrameLayout.LayoutParams.WRAP_CONTENT,
-                  gravity
-              ).apply {
-                if (offset > 0) {
-                  topMargin = abs(offset)
-                } else if (offset < 0) {
-                  bottomMargin = abs(offset)
-                }
-              }
+              val layoutParams =
+                      FrameLayout.LayoutParams(
+                                      FrameLayout.LayoutParams.MATCH_PARENT,
+                                      FrameLayout.LayoutParams.WRAP_CONTENT,
+                                      gravity
+                              )
+                              .apply {
+                                if (offset > 0) {
+                                  topMargin = abs(offset)
+                                } else if (offset < 0) {
+                                  bottomMargin = abs(offset)
+                                }
+                              }
 
               // Add banner to container
               mBannerContainer?.addView(mBanner, 0, layoutParams)
@@ -709,25 +797,25 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
             } else {
               IronSource.loadBanner(mBanner)
             }
-            //TODO: Implement with real error codes
+            // TODO: Implement with real error codes
             result.success(null)
           } catch (e: Throwable) {
             Log.e(TAG, e.toString())
             result.error("ERROR", "Failed to load banner", e)
           }
         }
-      }//TODO: Implement with real error codes
-    } ?: result.error("ERROR", "loadBanner called when activity is null", null)
+      } // TODO: Implement with real error codes
+    }
+            ?: result.error("ERROR", "loadBanner called when activity is null", null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Destroys the banner ad.
    *
    * @param result The result to be returned after processing.
    */
   private fun destroyBanner(@NonNull result: Result) {
-    Log.d("IRONSOURCE_DEBUG", "destroyBanner: activity: ${activity?.toString()}")
     activity?.apply {
       runOnUiThread {
         synchronized(this@IronSourceMediationPlugin) {
@@ -740,17 +828,17 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
           result.success(null)
         }
       }
-    } ?: result.error("ERROR", "destroyBanner called when activity is null", null)
+    }
+            ?: result.error("ERROR", "destroyBanner called when activity is null", null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Displays the banner ad.
    *
    * @param result The result to be returned after processing.
    */
   private fun displayBanner(@NonNull result: Result) {
-    Log.d("IRONSOURCE_DEBUG", "displayBanner: activity: ${activity?.toString()}")
     activity?.apply {
       runOnUiThread {
         synchronized(this@IronSourceMediationPlugin) {
@@ -760,17 +848,17 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
           result.success(null)
         }
       }
-    } ?: result.error("ERROR", "displayBanner called when activity is null", null)
+    }
+            ?: result.error("ERROR", "displayBanner called when activity is null", null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Hides the banner ad.
    *
    * @param result The result to be returned after processing.
    */
   private fun hideBanner(@NonNull result: Result) {
-    Log.d("IRONSOURCE_DEBUG", "hideBanner: activity: ${activity?.toString()}")
     activity?.apply {
       runOnUiThread {
         synchronized(this@IronSourceMediationPlugin) {
@@ -780,19 +868,21 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
           result.success(null)
         }
       }
-    } ?: result.error("ERROR", "hideBanner called when activity is null", null)
+    }
+            ?: result.error("ERROR", "hideBanner called when activity is null", null)
   }
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Checks if a banner placement is capped.
    *
-   * @param call   The method call containing arguments.
+   * @param call The method call containing arguments.
    * @param result The result to be returned after processing.
    */
   private fun isBannerPlacementCapped(@NonNull call: MethodCall, @NonNull result: Result) {
-    val placementName = call.argument("placementName") as String?
-        ?: return result.error("ERROR", "placementName is null", null)
+    val placementName =
+            call.argument("placementName") as String?
+                    ?: return result.error("ERROR", "placementName is null", null)
     val isCapped = IronSource.isBannerPlacementCapped(placementName)
     return result.success(isCapped)
   }
@@ -800,40 +890,46 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
   /**
    * Return maximal adaptive height according to given width.
    *
-   * @param call   The method call containing arguments.
+   * @param call The method call containing arguments.
    * @param result The result to be returned after processing.
    */
   private fun getMaximalAdaptiveHeight(call: MethodCall, result: Result) {
-    val width = call.argument("width") as Int? ?: return result.error("ERROR", "width is null", null)
+    val width =
+            call.argument("width") as Int? ?: return result.error("ERROR", "width is null", null)
     val adaptiveHeight = ISBannerSize.getMaximalAdaptiveHeight(width)
     return result.success(adaptiveHeight)
   }
   // endregion
 
-  /** region LevelPlay Native Ad API ==============================================================================*/
+  /**
+   * region LevelPlay Native Ad API
+   * ==============================================================================
+   */
 
   /**
-   * Adds a new native ad view factory to the internal registry and registers it with the Flutter platform view registry.
+   * Adds a new native ad view factory to the internal registry and registers it with the Flutter
+   * platform view registry.
    *
-   * @param viewTypeId           The ID or type of the native ad view factory.
-   * @param nativeAdViewFactory  The factory responsible for creating native ad views.
+   * @param viewTypeId The ID or type of the native ad view factory.
+   * @param nativeAdViewFactory The factory responsible for creating native ad views.
    */
-  private fun addNativeAdViewFactory(viewTypeId: String, nativeAdViewFactory: LevelPlayNativeAdViewFactory) {
+  private fun addNativeAdViewFactory(
+          viewTypeId: String,
+          nativeAdViewFactory: LevelPlayNativeAdViewFactory
+  ) {
     if (nativeAdViewFactories.containsKey(viewTypeId)) {
       Log.e(TAG, "A native ad view factory with ID $viewTypeId already exists.")
       return
     }
     nativeAdViewFactories[viewTypeId] = nativeAdViewFactory
     // Custom Native ad platform view registry
-    pluginBinding
-      ?.platformViewRegistry
-      ?.registerViewFactory(viewTypeId, nativeAdViewFactory)
+    pluginBinding?.platformViewRegistry?.registerViewFactory(viewTypeId, nativeAdViewFactory)
   }
 
   /**
    * Removes a native ad view factory from the internal registry based on its viewTypeId ID.
    *
-   * @param viewTypeId  The ID of the factory to be removed.
+   * @param viewTypeId The ID of the factory to be removed.
    */
   private fun removeNativeAdViewFactory(viewTypeId: String) {
     nativeAdViewFactories.remove(viewTypeId)
@@ -841,39 +937,46 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
 
   // endregion
 
-  /** region Config API ==========================================================================*/
+  /**
+   * region Config API ==========================================================================
+   */
 
-  //TODO: Implement with real error codes
+  // TODO: Implement with real error codes
   /**
    * Enables or disables client-side callbacks.
    *
-   * @param call   The method call containing arguments.
+   * @param call The method call containing arguments.
    * @param result The result to be returned after processing.
    */
   private fun setClientSideCallbacks(@NonNull call: MethodCall, @NonNull result: Result) {
-    val isEnabled = call.argument("isEnabled") as Boolean?
-        ?: return result.error("ERROR", "isEnabled is null", null)
+    val isEnabled =
+            call.argument("isEnabled") as Boolean?
+                    ?: return result.error("ERROR", "isEnabled is null", null)
     SupersonicConfig.getConfigObj().clientSideCallbacks = isEnabled
     return result.success(null)
   }
   // endregion
 
-  /** region Internal Config API =================================================================*/
-
-  //TODO: Implement with real error codes
   /**
-   * Sets plugin data for IronSource mediation.
-   * Only called internally in the process of init on the Flutter plugin
+   * region Internal Config API =================================================================
+   */
+
+  // TODO: Implement with real error codes
+  /**
+   * Sets plugin data for IronSource mediation. Only called internally in the process of init on the
+   * Flutter plugin
    *
-   * @param call   The method call containing arguments.
+   * @param call The method call containing arguments.
    * @param result The result to be returned after processing.
    */
   private fun setPluginData(@NonNull call: MethodCall, @NonNull result: Result) {
 
-    val pluginType = call.argument("pluginType") as String?
-        ?: return result.error("ERROR", "pluginType is null", null)
-    val pluginVersion = call.argument("pluginVersion") as String?
-        ?: return result.error("ERROR", "pluginVersion is null", null)
+    val pluginType =
+            call.argument("pluginType") as String?
+                    ?: return result.error("ERROR", "pluginType is null", null)
+    val pluginVersion =
+            call.argument("pluginVersion") as String?
+                    ?: return result.error("ERROR", "pluginVersion is null", null)
     val pluginFrameworkVersion = call.argument("pluginFrameworkVersion") as String?
 
     ConfigFile.getConfigFile().setPluginData(pluginType, pluginVersion, pluginFrameworkVersion)
@@ -882,35 +985,29 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
 
   // endregion
 
-  /** region ActivityAware =======================================================================*/
+  /**
+   * region ActivityAware =======================================================================
+   */
   override fun onAttachedToActivity(binding: ActivityPluginBinding) {
-    Log.d("IRONSOURCE_DEBUG", "onAttachedToActivity: Thread: ${Thread.currentThread().getName()}");
-    Log.d("IRONSOURCE_DEBUG", "onAttachedToActivity: activity: ${activity?.toString()}")
+    Log.d(TAG, "onAttachedToActivity: ${binding.activity}")
     activity = binding.activity
-    channel = MethodChannel(pluginBinding!!.binaryMessenger, "ironsource_mediation")
-    channel?.setMethodCallHandler(this)
-    initListeners()
-
-    if (activity is FlutterActivity)
-    {
-      (activity as FlutterActivity).lifecycle.addObserver(this)
+    if (channel === null) {
+      init()
     }
-    else if (activity is FlutterFragmentActivity)
-    {
+
+    if (activity is FlutterActivity) {
+      (activity as FlutterActivity).lifecycle.addObserver(this)
+    } else if (activity is FlutterFragmentActivity) {
       (activity as FlutterFragmentActivity).lifecycle.addObserver(this)
     }
     setActivityToListeners(activity)
   }
 
   override fun onDetachedFromActivityForConfigChanges() {
-    Log.d("IRONSOURCE_DEBUG", "onDetachedFromActivityForConfigChanges: Thread: ${Thread.currentThread().getName()}");
-    Log.d("IRONSOURCE_DEBUG", "onDetachedFromActivityForConfigChanges: activity: ${activity?.toString()}")
-    if (activity is FlutterActivity)
-    {
+    Log.d(TAG, "onDetachedFromActivityForConfigChanges: ${activity}")
+    if (activity is FlutterActivity) {
       (activity as FlutterActivity).lifecycle.removeObserver(this)
-    }
-    else if (activity is FlutterFragmentActivity)
-    {
+    } else if (activity is FlutterFragmentActivity) {
       (activity as FlutterFragmentActivity).lifecycle.removeObserver(this)
     }
     activity = null
@@ -918,27 +1015,21 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
   }
 
   override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
-    Log.d("IRONSOURCE_DEBUG", "onReattachedToActivityForConfigChanges: activity: ${activity?.toString()}")
-    if (activity is FlutterActivity)
-    {
+    Log.d(TAG, "onReattachedToActivityForConfigChanges: ${binding.activity}")
+    if (activity is FlutterActivity) {
       activity = binding.activity as FlutterActivity
       (activity as FlutterActivity).lifecycle.addObserver(this)
-    }
-    else if (activity is FlutterFragmentActivity)
-    {
+    } else if (activity is FlutterFragmentActivity) {
       activity = binding.activity as FlutterFragmentActivity
       (activity as FlutterFragmentActivity).lifecycle.addObserver(this)
     }
     setActivityToListeners(activity)
   }
   override fun onDetachedFromActivity() {
-    Log.d("IRONSOURCE_DEBUG", "onDetachedFromActivity: activity: ${activity?.toString()}")
-    if (activity is FlutterActivity)
-    {
+    Log.d(TAG, "onDetachedFromActivity: ${activity}")
+    if (activity is FlutterActivity) {
       (activity as FlutterActivity).lifecycle.removeObserver(this)
-    }
-    else if (activity is FlutterFragmentActivity)
-    {
+    } else if (activity is FlutterFragmentActivity) {
       (activity as FlutterFragmentActivity).lifecycle.removeObserver(this)
     }
     activity = null
@@ -947,51 +1038,50 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
 
   // endregion
 
-  /**
-   * Set FlutterActivity to listener instances
-   */
+  /** Set FlutterActivity to listener instances */
   private fun setActivityToListeners(activity: Activity?) {
-    Log.d("IRONSOURCE_DEBUG", "setActivityToListeners: activity: ${activity?.toString()}")
+    Log.d(TAG, "setActivityToListeners: $activity")
     mImpressionDataListener?.activity = activity
     mInitializationListener?.activity = activity
     mLevelPlayRewardedVideoListener?.activity = activity
     mLevelPlayInterstitialListener?.activity = activity
     mLevelPlayBannerListener?.activity = activity
-    Log.d("IRONSOURCE_DEBUG", "end setActivityToListeners: activity: ${activity?.toString()}")
   }
 
-  /** region LifeCycleObserver  ==================================================================*/
+  /** region LifeCycleObserver ================================================================== */
   @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
   fun onResume() {
-    Log.d("IRONSOURCE_DEBUG", "onResume: activity: ${activity?.toString()}")
+    Log.d(TAG, "onResume: ${activity}")
     activity?.apply { IronSource.onResume(this) }
   }
   @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
   fun onPause() {
-    Log.d("IRONSOURCE_DEBUG", "onPause: activity: ${activity?.toString()}")
     activity?.apply { IronSource.onPause(this) }
   }
   // endregion
 
   companion object {
     val TAG = IronSourceMediationPlugin::class.java.simpleName
-    var isPluginAttached: Boolean = false
-
 
     /**
-     * Registers a native ad view factory with the specified factory ID to be used within the Flutter engine.
+     * Registers a native ad view factory with the specified factory ID to be used within the
+     * Flutter engine.
      *
-     * @param flutterEngine The Flutter engine instance where the native ad view factory will be registered.
+     * @param flutterEngine The Flutter engine instance where the native ad view factory will be
+     * registered.
      * @param viewType The ID for the native ad view factory.
-     * @param nativeAdViewFactory The platform view factory responsible for creating native ad views.
+     * @param nativeAdViewFactory The platform view factory responsible for creating native ad
+     * views.
      */
     fun registerNativeAdViewFactory(
-      flutterEngine: FlutterEngine,
-      viewTypeId: String,
-      nativeAdViewFactory: LevelPlayNativeAdViewFactory
+            flutterEngine: FlutterEngine,
+            viewTypeId: String,
+            nativeAdViewFactory: LevelPlayNativeAdViewFactory
     ) {
       try {
-        val flutterPlugin = flutterEngine.plugins[IronSourceMediationPlugin::class.java] as IronSourceMediationPlugin
+        val flutterPlugin =
+                flutterEngine.plugins[IronSourceMediationPlugin::class.java] as
+                        IronSourceMediationPlugin
         flutterPlugin.addNativeAdViewFactory(viewTypeId, nativeAdViewFactory)
       } catch (e: IllegalStateException) {
         Log.e(TAG, "The plugin may have not been registered.")
@@ -1001,15 +1091,15 @@ class IronSourceMediationPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     /**
      * Unregisters a previously registered native ad view factory from the Flutter engine.
      *
-     * @param flutterEngine The Flutter engine instance from which the native ad view factory will be unregistered.
+     * @param flutterEngine The Flutter engine instance from which the native ad view factory will
+     * be unregistered.
      * @param viewTypeId The ID of the native ad view factory to be unregistered.
      */
-    fun unregisterNativeAdViewFactory(
-      flutterEngine: FlutterEngine,
-      viewTypeId: String
-    ) {
+    fun unregisterNativeAdViewFactory(flutterEngine: FlutterEngine, viewTypeId: String) {
       try {
-        val flutterPlugin = flutterEngine.plugins[IronSourceMediationPlugin::class.java] as IronSourceMediationPlugin
+        val flutterPlugin =
+                flutterEngine.plugins[IronSourceMediationPlugin::class.java] as
+                        IronSourceMediationPlugin
         flutterPlugin.removeNativeAdViewFactory(viewTypeId)
       } catch (e: IllegalStateException) {
         Log.e(TAG, "The plugin may have not been registered.")
