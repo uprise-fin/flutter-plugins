@@ -45,7 +45,6 @@ class IronSourceMediationPlugin :
   ///
   /// This local reference serves to register the plugin with the Flutter Engine and unregister it
   /// when the Flutter Engine is detached from the Activity
-  private var channel: MethodChannel? = null
   private var activity: Activity? = null
   private var context: Context? = null
 
@@ -67,8 +66,16 @@ class IronSourceMediationPlugin :
   private var nativeAdViewFactories = hashMapOf<String, PlatformViewFactory>()
   private var pluginBinding: FlutterPluginBinding? = null
 
+  private lateinit var channel: MethodChannel
   private var binaryMessenger: BinaryMessenger? = null
   private val CHANNEL_NAME = "ironsource_mediation"
+
+  fun init() {
+    Log.d("IronSourceMediationPlugin", "init: Thread: ${Thread.currentThread().getName()}")
+    channel = MethodChannel(binaryMessenger!!, CHANNEL_NAME)
+    channel.setMethodCallHandler(this)
+    initListeners()
+  }
 
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPluginBinding) {
     Log.d(
@@ -84,13 +91,6 @@ class IronSourceMediationPlugin :
     addNativeAdViewFactory("levelPlayNativeAdViewType", nativeAdViewFactory)
   }
 
-  fun init() {
-    Log.d("IronSourceMediationPlugin", "init: Thread: ${Thread.currentThread().getName()}")
-    channel = MethodChannel(binaryMessenger!!, CHANNEL_NAME)
-    channel?.setMethodCallHandler(this)
-    initListeners()
-  }
-
   override fun onDetachedFromEngine(@NonNull binding: FlutterPluginBinding) {
     //
     Log.d(
@@ -98,10 +98,12 @@ class IronSourceMediationPlugin :
             "onDetachedFromEngine: Thread: ${Thread.currentThread().getName()}"
     )
 
-    if (channel != null) {
-      channel?.setMethodCallHandler(null)
+    if (::channel.isInitialized) {
+      channel.setMethodCallHandler(null)
       detachListeners()
     }
+    binaryMessenger = null
+    context = null
   }
 
   /** Instantiate and set listeners */
@@ -991,7 +993,7 @@ class IronSourceMediationPlugin :
   override fun onAttachedToActivity(binding: ActivityPluginBinding) {
     Log.d(TAG, "onAttachedToActivity: ${binding.activity}")
     activity = binding.activity
-    if (channel === null) {
+    if (!::channel.isInitialized) {
       init()
     }
 
